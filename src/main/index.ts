@@ -18,6 +18,7 @@ import { initShellMain } from '../lib/shell/main.js'
 import { initAIMain } from '../lib/ai/main.js'
 import { initTTSMain } from '../lib/tts/main.js'
 import { initUpdaterMain } from '../lib/updater/main.js'
+import { initApiServerMain } from '../lib/api/main.js'
 
 // 配置[配置存储]
 const store = new Store<StoreType>({
@@ -54,6 +55,7 @@ app.whenReady().then(async () => {
   // ============================ IPC ============================
 
   initStoreMain(store)
+  initApiServerMain(store)
   let mainWindow = createMainWindow() /// 主界面
   createMenubarWindow() /// 小窗口界面
   initMain(mainWindow)

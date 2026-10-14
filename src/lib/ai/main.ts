@@ -127,6 +127,22 @@ async function exclusiveProvider(work: () => Promise<void>) {
     changed()
   }
 }
+/** 已安装的本地模型（供本地 API 服务列出与选择） */
+export async function listInstalledModels() {
+  await readiness
+  const models = (await state(0)).models
+    .filter((m) => m.installed)
+    .map((m) => ({
+      id: m.id,
+      name: m.name,
+      family: m.family,
+      mode: m.mode,
+      voices: m.voices ?? [],
+      languages: m.languages
+    }))
+  return { models, defaultModel: config.get('defaultModel') as string | undefined }
+}
+
 export function initAIMain() {
   root = path.join(app.getPath('userData'), 'ai')
   modelDirectory = path.join(root, 'models')

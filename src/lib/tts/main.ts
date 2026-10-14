@@ -147,6 +147,183 @@ async function synthesizeWithFallback(
   }
 }
 
+/**
+ * 生成语音并写入历史记录（IPC 与本地 API 服务共用）
+ * @param owner 发起方标识，本地引擎任务据此归属
+ */
+export async function generateSpeech(
+  params: TTSGenerateParams,
+  owner: number
+): Promise<TTSGenerateResult> {
+  try {
+    await ensureDatabaseReady()
+    if (
+      !params ||
+      typeof params.text !== 'string' ||
+      !params.text.trim() ||
+      params.text.length > 5000
+    )
+      throw new Error('Text must contain 1–5000 characters')
+    const text = params.text
+    const local = params.engine === 'local' ? params.local : undefined
+    if (params.engine && !['edge', 'local'].includes(params.engine))
+      throw new Error('Unsupported engine')
+    const voiceName =
+      params.engine === 'local' ? local?.speaker || local?.modelId || '' : params.voiceName
+    const options =
+      params.engine === 'local'
+        ? { rate: local?.speed ?? 1, volume: 1, pitch: 0 }
+        : params.options
+    if (
+      !voiceName ||
+      !options ||
+      !Number.isFinite(options.rate) ||
+      options.rate < 0.5 ||
+      options.rate > 2 ||
+      !Number.isFinite(options.volume) ||
+      options.volume < 0 ||
+      options.volume > 1 ||
+      !Number.isFinite(options.pitch) ||
+      Math.abs(options.pitch) > 50
+    )
+      throw new Error('Invalid TTS parameters')
+
+    // 格式化参数为 edge-tts-universal 所需格式
+    // rate: 基于 1.0，范围 0.5-2.0 -> -25% 到 +50%
+    const rateValue = Math.round((options.rate - 1) * 50)
+    const rate = rateValue >= 0 ? `+${rateValue}%` : `${rateValue}%`
+
+    // volume: 基于 0.5，范围 0-1.0 -> -50% 到 +50%
+    const volumeValue = Math.round((options.volume - 0.5) * 100)
+    const volume = volumeValue >= 0 ? `+${volumeValue}%` : `${volumeValue}%`
+
+    // pitch: 范围 -50 到 +50 Hz
+    const pitchValue = Math.round(options.pitch)
+    const pitch = pitchValue >= 0 ? `+${pitchValue}Hz` : `${pitchValue}Hz`
+
+    const saveGeneratedAudio = async (
+      buffer: Buffer,
+      duration: number,
+      signal?: AbortSignal
+    ): Promise<TTSGenerateResult> => {
+      signal?.throwIfAborted()
+      if (!buffer.length) throw new Error('音频生成失败')
+      await fs.mkdir(audioDir, { recursive: true })
+      const audioPath = path.join(audioDir, `tts_${randomUUID()}.${sniffAudio(buffer).ext}`)
+      const temporary = `${audioPath}.part`
+      try {
+        await fs.writeFile(temporary, buffer)
+        signal?.throwIfAborted()
+        await fs.rename(temporary, audioPath)
+        signal?.throwIfAborted()
+        const now = Math.floor(Date.now() / 1000)
+        await db.insert(speakRecords).values({
+          text,
+          engine: local ? 'local' : 'edge',
+          modelId: local?.modelId,
+          generationParams: JSON.stringify(local || options),
+          voiceName,
+          rate: options.rate,
+          volume: options.volume,
+          pitch: options.pitch,
+          language: local ? local.language || 'zh' : voiceName.split('-').slice(0, 2).join('-'),
+          audioPath,
+          duration: Math.ceil(duration),
+          wordCount: text.length,
+          createdAt: now,
+          updatedAt: now
+        })
+        return { success: true, data: { audioPath, duration } }
+      } catch (error) {
+        await Promise.all([
+          fs.rm(temporary, { force: true }),
+          fs.rm(audioPath, { force: true })
+        ])
+        throw error
+      }
+    }
+    if (params.engine === 'local') {
+      if (!params.local || typeof params.local.modelId !== 'string')
+        throw new Error('请选择本地模型')
+      return await generateLocal(
+        text,
+        params.local,
+        params.taskId,
+        owner,
+        ({ buffer, duration }, signal) => saveGeneratedAudio(buffer, duration, signal)
+      )
+    }
+    return await saveGeneratedAudio(
+      await synthesizeWithFallback(text, voiceName, { rate, volume, pitch }, options),
+      Math.ceil(text.length / 3)
+    )
+  } catch (error) {
+    console.error('TTS 生成失败:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '未知错误'
+    }
+  }
+}
+
+/** 获取可用语音列表（IPC 与本地 API 服务共用） */
+export async function getVoices(): Promise<VoiceInfo[]> {
+  try {
+    if (!voices || voices.length == 0) {
+      let allVoices = await listVoices(await resolveProxy())
+      const itemMap = new Map<
+        string,
+        {
+          country: string
+          countryNative: string
+          language: string
+          languageNative: string
+        }
+      >(
+        dataVoices.map((item) => [
+          item.name,
+          {
+            country: item.country,
+            countryNative: item.countryNative,
+            language: item.language,
+            languageNative: item.languageNative
+          }
+        ])
+      )
+
+      voices = allVoices.map((v: any) => {
+        let item: any = itemMap.get(v.ShortName) ?? {}
+        return {
+          name: v.Name,
+          displayName: v.FriendlyName || v.Name,
+          locale: v.Locale,
+          gender: v.Gender === 'Male' ? 'Male' : 'Female',
+          description: v.Description,
+          country: item.country,
+          countryNative: item.countryNative,
+          language: item.language,
+          languageNative: item.languageNative
+        }
+      })
+      console.log('allVoices', JSON.stringify(itemMap))
+    }
+    return voices
+  } catch (error) {
+    console.error('获取语音列表失败:', error)
+    return dataVoices.map((v) => ({
+      name: v.name,
+      displayName: v.name,
+      locale: v.locale,
+      gender: v.gender === 'Male' ? 'Male' : 'Female',
+      description: v.name,
+      country: v.country,
+      countryNative: v.countryNative,
+      language: v.language,
+      languageNative: v.languageNative
+    }))
+  }
+}
+
 export function initTTSMain(mainWindow: any) {
   currentMainWindow = mainWindow
 
@@ -161,179 +338,19 @@ export function initTTSMain(mainWindow: any) {
   fs.mkdir(audioDir, { recursive: true }).catch(console.error)
 
   // 生成音频
+  // 生成音频
   ipcMain.handle(
     'tts:generate',
     async (event, params: TTSGenerateParams): Promise<TTSGenerateResult> => {
-      try {
-        await ensureDatabaseReady()
-        if (event.senderFrame !== event.sender.mainFrame) throw new Error('Untrusted TTS sender')
-        if (
-          !params ||
-          typeof params.text !== 'string' ||
-          !params.text.trim() ||
-          params.text.length > 5000
-        )
-          throw new Error('Text must contain 1–5000 characters')
-        const text = params.text
-        const local = params.engine === 'local' ? params.local : undefined
-        if (params.engine && !['edge', 'local'].includes(params.engine))
-          throw new Error('Unsupported engine')
-        const voiceName =
-          params.engine === 'local' ? local?.speaker || local?.modelId || '' : params.voiceName
-        const options =
-          params.engine === 'local'
-            ? { rate: local?.speed ?? 1, volume: 1, pitch: 0 }
-            : params.options
-        if (
-          !voiceName ||
-          !options ||
-          !Number.isFinite(options.rate) ||
-          options.rate < 0.5 ||
-          options.rate > 2 ||
-          !Number.isFinite(options.volume) ||
-          options.volume < 0 ||
-          options.volume > 1 ||
-          !Number.isFinite(options.pitch) ||
-          Math.abs(options.pitch) > 50
-        )
-          throw new Error('Invalid TTS parameters')
-
-        // 格式化参数为 edge-tts-universal 所需格式
-        // rate: 基于 1.0，范围 0.5-2.0 -> -25% 到 +50%
-        const rateValue = Math.round((options.rate - 1) * 50)
-        const rate = rateValue >= 0 ? `+${rateValue}%` : `${rateValue}%`
-
-        // volume: 基于 0.5，范围 0-1.0 -> -50% 到 +50%
-        const volumeValue = Math.round((options.volume - 0.5) * 100)
-        const volume = volumeValue >= 0 ? `+${volumeValue}%` : `${volumeValue}%`
-
-        // pitch: 范围 -50 到 +50 Hz
-        const pitchValue = Math.round(options.pitch)
-        const pitch = pitchValue >= 0 ? `+${pitchValue}Hz` : `${pitchValue}Hz`
-
-        const saveGeneratedAudio = async (
-          buffer: Buffer,
-          duration: number,
-          signal?: AbortSignal
-        ): Promise<TTSGenerateResult> => {
-          signal?.throwIfAborted()
-          if (!buffer.length) throw new Error('音频生成失败')
-          await fs.mkdir(audioDir, { recursive: true })
-          const audioPath = path.join(audioDir, `tts_${randomUUID()}.${sniffAudio(buffer).ext}`)
-          const temporary = `${audioPath}.part`
-          try {
-            await fs.writeFile(temporary, buffer)
-            signal?.throwIfAborted()
-            await fs.rename(temporary, audioPath)
-            signal?.throwIfAborted()
-            const now = Math.floor(Date.now() / 1000)
-            await db.insert(speakRecords).values({
-              text,
-              engine: local ? 'local' : 'edge',
-              modelId: local?.modelId,
-              generationParams: JSON.stringify(local || options),
-              voiceName,
-              rate: options.rate,
-              volume: options.volume,
-              pitch: options.pitch,
-              language: local ? local.language || 'zh' : voiceName.split('-').slice(0, 2).join('-'),
-              audioPath,
-              duration: Math.ceil(duration),
-              wordCount: text.length,
-              createdAt: now,
-              updatedAt: now
-            })
-            return { success: true, data: { audioPath, duration } }
-          } catch (error) {
-            await Promise.all([
-              fs.rm(temporary, { force: true }),
-              fs.rm(audioPath, { force: true })
-            ])
-            throw error
-          }
-        }
-        if (params.engine === 'local') {
-          if (!params.local || typeof params.local.modelId !== 'string')
-            throw new Error('请选择本地模型')
-          return await generateLocal(
-            text,
-            params.local,
-            params.taskId,
-            event.sender.id,
-            ({ buffer, duration }, signal) => saveGeneratedAudio(buffer, duration, signal)
-          )
-        }
-        return await saveGeneratedAudio(
-          await synthesizeWithFallback(text, voiceName, { rate, volume, pitch }, options),
-          Math.ceil(text.length / 3)
-        )
-      } catch (error) {
-        console.error('TTS 生成失败:', error)
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : '未知错误'
-        }
+      if (event.senderFrame !== event.sender.mainFrame) {
+        return { success: false, error: 'Untrusted TTS sender' }
       }
+      return generateSpeech(params, event.sender.id)
     }
   )
 
   // 获取可用语音列表
-  ipcMain.handle('tts:get-voices', async (): Promise<VoiceInfo[]> => {
-    try {
-      if (!voices || voices.length == 0) {
-        let allVoices = await listVoices(await resolveProxy())
-        const itemMap = new Map<
-          string,
-          {
-            country: string
-            countryNative: string
-            language: string
-            languageNative: string
-          }
-        >(
-          dataVoices.map((item) => [
-            item.name,
-            {
-              country: item.country,
-              countryNative: item.countryNative,
-              language: item.language,
-              languageNative: item.languageNative
-            }
-          ])
-        )
-
-        voices = allVoices.map((v: any) => {
-          let item: any = itemMap.get(v.ShortName) ?? {}
-          return {
-            name: v.Name,
-            displayName: v.FriendlyName || v.Name,
-            locale: v.Locale,
-            gender: v.Gender === 'Male' ? 'Male' : 'Female',
-            description: v.Description,
-            country: item.country,
-            countryNative: item.countryNative,
-            language: item.language,
-            languageNative: item.languageNative
-          }
-        })
-        console.log('allVoices', JSON.stringify(itemMap))
-      }
-      return voices
-    } catch (error) {
-      console.error('获取语音列表失败:', error)
-      return dataVoices.map((v) => ({
-        name: v.name,
-        displayName: v.name,
-        locale: v.locale,
-        gender: v.gender === 'Male' ? 'Male' : 'Female',
-        description: v.name,
-        country: v.country,
-        countryNative: v.countryNative,
-        language: v.language,
-        languageNative: v.languageNative
-      }))
-    }
-  })
+  ipcMain.handle('tts:get-voices', (): Promise<VoiceInfo[]> => getVoices())
 
   // 试听语音
   ipcMain.handle(

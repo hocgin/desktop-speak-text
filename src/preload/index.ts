@@ -6,12 +6,14 @@ import { initI18Next } from '../lib/i18n/preload.js'
 import { initAIPreload } from '../lib/ai/preload.js'
 import { initTTSPreload } from '../lib/tts/preload.js'
 import { initUpdaterPreload } from '../lib/updater/preload.js'
+import { initApiServerPreload } from '../lib/api/preload.js'
 
 let electronAPI = initStorePreload(_electronAPI)
 electronAPI = initShellPreload(electronAPI)
 electronAPI = initAIPreload(electronAPI)
 electronAPI = initTTSPreload(electronAPI)
 electronAPI = initUpdaterPreload(electronAPI)
+electronAPI = initApiServerPreload(electronAPI)
 let _ = initI18Next()
 
 // Custom APIs for renderer

@@ -2,6 +2,7 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 import type { AIAPI } from '../lib/ai/type.js'
 import type { TTSAPI } from '../lib/tts/type.js'
 import type { UpdaterAPI } from '../lib/updater/type.js'
+import type { ApiServerAPI } from '../lib/api/type.js'
 
 // Store API
 export interface StoreAPI {
@@ -30,6 +31,7 @@ declare global {
       ai: AIAPI
       tts: TTSAPI
       updater: UpdaterAPI
+      apiServer: ApiServerAPI
     }
     api: WindowAPI
   }
