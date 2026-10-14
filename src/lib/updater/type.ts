@@ -63,7 +63,7 @@ export interface UpdaterAPI {
   // 获取当前状态
   getStatus: () => Promise<ApiResponse<UpdaterState>>
 
-  // 启用自动检查（定时检查，默认24小时）
+  // 启用自动检查（启动延迟检查一次，之后定时检查，默认6小时）
   enableAutoCheck: (intervalHours?: number) => Promise<ApiResponse<void>>
 
   // 禁用自动检查

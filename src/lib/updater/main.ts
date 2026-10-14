@@ -19,6 +19,11 @@ let currentState: UpdaterState = {
 
 // 自动检查定时器
 let autoCheckTimer: NodeJS.Timeout | null = null
+let startupCheckTimer: NodeJS.Timeout | null = null
+// 启动后延迟检查，避免与启动流程抢占资源
+const STARTUP_CHECK_DELAY_MS = 5000
+// 默认周期检查间隔（小时）
+const DEFAULT_CHECK_INTERVAL_HOURS = 6
 let isUpdaterMainInitialized = false
 
 // 标记是否处于开发态更新调试模式，避免误执行安装流程
@@ -127,6 +132,45 @@ autoUpdater.on('update-downloaded', (info) => {
   }
   notifyStatusUpdate()
 })
+
+// 静默检查：正在检查/下载/安装或已下载待安装时跳过，避免打断当前流程
+async function silentCheck(reason: string) {
+  if (['checking', 'downloading', 'downloaded', 'installing'].includes(currentState.status)) {
+    console.log(`[Updater] ${reason}：当前状态为 ${currentState.status}，跳过检查`)
+    return
+  }
+  console.log(`[Updater] ${reason}`)
+  try {
+    await autoUpdater.checkForUpdates()
+  } catch (error) {
+    console.error(`[Updater] ${reason}失败:`, error)
+  }
+}
+
+function stopAutoCheck() {
+  if (startupCheckTimer) {
+    clearTimeout(startupCheckTimer)
+    startupCheckTimer = null
+  }
+  if (autoCheckTimer) {
+    clearInterval(autoCheckTimer)
+    autoCheckTimer = null
+  }
+}
+
+// 启动检查 + 周期性检查
+function startAutoCheck(intervalHours: number) {
+  stopAutoCheck()
+  startupCheckTimer = setTimeout(() => {
+    startupCheckTimer = null
+    void silentCheck('启动时检查更新')
+  }, STARTUP_CHECK_DELAY_MS)
+  autoCheckTimer = setInterval(
+    () => void silentCheck(`定时检查更新 (间隔: ${intervalHours}小时)`),
+    intervalHours * 60 * 60 * 1000
+  )
+  console.log(`[Updater] 已启用自动检查，间隔: ${intervalHours}小时`)
+}
 
 // 初始化函数
 export function initUpdaterMain(window: BrowserWindow) {
@@ -293,79 +337,26 @@ export function initUpdaterMain(window: BrowserWindow) {
   })
 
   // 启用自动检查
-  ipcMain.handle('updater:enable-auto-check', async (_, intervalHours: number = 24): Promise<ApiResponse<void>> => {
-    try {
-      // 清除现有定时器
-      if (autoCheckTimer) {
-        clearInterval(autoCheckTimer)
-        autoCheckTimer = null
+  ipcMain.handle(
+    'updater:enable-auto-check',
+    async (_, intervalHours: number = DEFAULT_CHECK_INTERVAL_HOURS): Promise<ApiResponse<void>> => {
+      if (!Number.isFinite(intervalHours) || intervalHours <= 0) {
+        return { success: false, error: '检查间隔必须大于 0' }
       }
-
-      // 立即检查一次
-      await autoUpdater.checkForUpdates()
-
-      // 设置定时检查
-      const intervalMs = intervalHours * 60 * 60 * 1000
-      autoCheckTimer = setInterval(async () => {
-        console.log(`[Updater] 定时检查更新 (间隔: ${intervalHours}小时)`)
-        try {
-          await autoUpdater.checkForUpdates()
-        } catch (error) {
-          console.error('[Updater] 定时检查失败:', error)
-        }
-      }, intervalMs)
-
-      console.log(`[Updater] 已启用自动检查，间隔: ${intervalHours}小时`)
+      startAutoCheck(intervalHours)
       return { success: true }
-    } catch (error) {
-      console.error('[Updater] 启用自动检查失败:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '启用自动检查失败'
-      }
     }
-  })
+  )
 
   // 禁用自动检查
   ipcMain.handle('updater:disable-auto-check', async (): Promise<ApiResponse<void>> => {
-    try {
-      if (autoCheckTimer) {
-        clearInterval(autoCheckTimer)
-        autoCheckTimer = null
-        console.log('[Updater] 已禁用自动检查')
-      }
-      return { success: true }
-    } catch (error) {
-      console.error('[Updater] 禁用自动检查失败:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '禁用自动检查失败'
-      }
-    }
+    stopAutoCheck()
+    console.log('[Updater] 已禁用自动检查')
+    return { success: true }
   })
 
-  // 应用启动时自动检查更新（仅在打包后）
-  if (app.isPackaged) {
-    // 延迟5秒后检查，避免启动时过于繁忙
-    setTimeout(async () => {
-      console.log('[Updater] 启动时自动检查更新')
-      try {
-        await autoUpdater.checkForUpdates()
-        // 启用24小时定时检查
-        const intervalMs = 24 * 60 * 60 * 1000
-        autoCheckTimer = setInterval(async () => {
-          console.log('[Updater] 定时检查更新')
-          try {
-            await autoUpdater.checkForUpdates()
-          } catch (error) {
-            console.error('[Updater] 定时检查失败:', error)
-          }
-        }, intervalMs)
-      } catch (error) {
-        console.error('[Updater] 启动时检查失败:', error)
-      }
-    }, 5000)
-  }
+  // 应用启动时开启自动检查：启动延迟检查一次，之后周期性检查
+  startAutoCheck(DEFAULT_CHECK_INTERVAL_HOURS)
 
   console.log('[Updater] 主进程模块已初始化')
 }
