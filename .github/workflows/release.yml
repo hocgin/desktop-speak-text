@@ -33,6 +33,13 @@ jobs:
         with:
           version: 8
 
+      - name: Rewrite git SSH URLs to HTTPS
+        shell: bash
+        run: |
+          # lockfile 中 @electron/node-gyp 使用 git+ssh 地址，CI 无 SSH 密钥
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://github.com/".insteadOf "git@github.com:"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
