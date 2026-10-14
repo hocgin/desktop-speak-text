@@ -2,9 +2,11 @@
 appId: in.hocg.app.desktop-speak-text
 productName: SpeakText
 compression: 'maximum'
+# 更新源: GitHub Releases (由 .github/workflows/release.yml 发布)
 publish:
-  provider: generic
-  url: https://cdn.hocgin.top/desktop-speak-text/auto-updates
+  provider: github
+  owner: hocgin
+  repo: desktop-speak-text
 directories:
   buildResources: build
 files:

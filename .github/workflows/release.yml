@@ -45,12 +45,18 @@ jobs:
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo snap install snapcraft --classic
           pnpm run build
           npx electron-builder --linux --publish never
 
       - name: Build macOS
         if: matrix.os == 'macos-latest'
+        env:
+          # 签名与公证（未配置时请在 electron-builder.yml 中关闭 mac.notarize）
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           pnpm run build
           npx electron-builder --mac --publish never
@@ -97,7 +103,10 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          # 必须为正式发布，electron-updater 无法读取 draft release
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
           overwrite_files: true
           fail_on_unmatched_files: false
           files: |
