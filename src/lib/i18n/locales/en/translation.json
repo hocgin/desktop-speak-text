@@ -303,6 +303,7 @@
     "apiRunning": "Running at {{url}}",
     "apiError": "Failed to start: {{error}}",
     "apiMcp": "MCP (Streamable HTTP; tools: speak / list_voices / list_models)",
+    "apiDocs": "API docs",
     "apiPort": "Port",
     "apiApply": "Apply",
     "apiPortInvalid": "Port must be 1024–65535",

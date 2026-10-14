@@ -303,6 +303,7 @@
     "apiRunning": "服务运行中：{{url}}",
     "apiError": "服务启动失败：{{error}}",
     "apiMcp": "MCP 接入（Streamable HTTP，工具：speak / list_voices / list_models）",
+    "apiDocs": "接口文档",
     "apiPort": "端口",
     "apiApply": "应用",
     "apiPortInvalid": "端口范围 1024–65535",

@@ -20,6 +20,8 @@ import {
 // 语言名称使用各自的本地名称，不随界面语言变化
 const FEEDBACK_URL = 'https://logspot.hocgin.top/addone-speak-text/?active=feedback'
 
+const API_DOCS_URL = 'https://logspot.hocgin.top/addone-speak-text/?active=api'
+
 const LANGUAGE_NAMES: Record<string, string> = { en: 'English', zh: '简体中文' }
 
 export default function SettingsPage(): React.JSX.Element {
@@ -213,6 +215,15 @@ export default function SettingsPage(): React.JSX.Element {
             {!portValid && (
               <span className="text-xs text-destructive">{t('settings.apiPortInvalid')}</span>
             )}
+            <Button
+              variant="link"
+              size="sm"
+              className="ml-auto"
+              onClick={() => window.electron.ipcRenderer.send('openExternal', API_DOCS_URL)}
+            >
+              <ExternalLink />
+              {t('settings.apiDocs')}
+            </Button>
           </div>
 
           {api.running && (
