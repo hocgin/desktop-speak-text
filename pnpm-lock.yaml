@@ -67,9 +67,6 @@ dependencies:
   lodash:
     specifier: ^4.17.21
     version: 4.17.21
-  menubar:
-    specifier: ^9.5.1
-    version: 9.5.1(electron@35.3.0)
   radix-ui:
     specifier: ^1.8.1
     version: 1.8.1(@types/react-dom@19.1.4)(@types/react@19.1.4)(react-dom@19.1.0)(react@19.1.0)
@@ -4442,10 +4439,6 @@ packages:
       - supports-color
     dev: true
 
-  /electron-positioner@4.1.0:
-    resolution: {integrity: sha512-726DfbI9ZNoCg+Fcu6XLuTKTnzf+6nFqv7h+K/V6Ug7IbaPMI7s9S8URnGtWFCy5N5PL4HSzRFF2mXuinftDdg==}
-    dev: false
-
   /electron-publish@26.0.11:
     resolution: {integrity: sha512-a8QRH0rAPIWH9WyyS5LbNvW9Ark6qe63/LqDB7vu2JXYpi0Gma5Q60Dh4tmTqhOBQt0xsrzD8qE7C+D7j+B24A==}
     dependencies:
@@ -6340,15 +6333,6 @@ packages:
   /memoize-one@6.0.0:
     resolution: {integrity: sha512-rkpe71W0N0c0Xz6QD0eJETuWAJGnJ9afsl1srmwPrI+yBCkge5EycXXbYRyvL29zZVUWQCY7InPRCv3GDXuZNw==}
     dev: true
-
-  /menubar@9.5.1(electron@35.3.0):
-    resolution: {integrity: sha512-swfgKal+DTgJINay36X+LGBSqyFKS4d9FyJ2w0s/4MtO7/UGplEZqluLTnq4xgLNxNjMWhXycOELP+rRYpTagA==}
-    peerDependencies:
-      electron: '>=9.0.0 <33.0.0'
-    dependencies:
-      electron: 35.3.0
-      electron-positioner: 4.1.0
-    dev: false
 
   /merge-descriptors@2.0.0:
     resolution: {integrity: sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==}
@@ -8416,7 +8400,7 @@ packages:
     dev: true
 
   github.com/electron/node-gyp/06b29aafb7708acef8b3669835c8a7857ebc92d2:
-    resolution: {commit: 06b29aafb7708acef8b3669835c8a7857ebc92d2, repo: git+ssh://git@github.com/electron/node-gyp.git, type: git}
+    resolution: {tarball: https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2}
     name: '@electron/node-gyp'
     version: 10.2.0-electron.1
     engines: {node: '>=12.13.0'}

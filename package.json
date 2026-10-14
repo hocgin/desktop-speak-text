@@ -44,7 +44,6 @@
     "isomorphic-ws": "^5.0.0",
     "jose": "^6.0.11",
     "lodash": "^4.17.21",
-    "menubar": "^9.5.1",
     "radix-ui": "^1.8.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

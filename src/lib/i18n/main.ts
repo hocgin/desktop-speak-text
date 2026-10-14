@@ -2,16 +2,14 @@ import i18next from 'i18next'
 import backend from 'i18next-fs-backend'
 import i18nextBackend from 'i18next-electron-fs-backend'
 import path from 'path'
-import { fallbackLng, languages, defaultNS, resolveLanguage } from './config.js'
+import { fallbackLng, languages, defaultNS } from './config.js'
 import { ipcMain } from 'electron/main'
-import { app, BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
 import fs from 'fs'
 import { Channel } from '../uikit/constant.js'
 
 const isMac = process.platform === 'darwin'
 const isDev = process.env.NODE_ENV === 'development'
-// 跟随系统语言，非中文系统默认英文
-const systemLng = () => resolveLanguage(app.getLocale())
 const prependPath = path.join(!isDev ? path.join(process.resourcesPath, '..') : '.', 'src/lib/i18n')
 
 i18next.use(backend).init({
@@ -38,7 +36,8 @@ export function initMain(win: BrowserWindow) {
   // Set up necessary bindings to update the menu items
   // based on the current language selected
   i18next.on('initialized', () => {
-    i18next.changeLanguage(systemLng())
+    // 默认英文，渲染进程启动后会按用户偏好同步语言
+    i18next.changeLanguage(fallbackLng)
     i18next.off('initialized') // Remove listener to this event as it's not needed anymore
     console.log('i18next.main initialized')
     console.log("i18next t('page.test') = ", i18next.t('page.test'))

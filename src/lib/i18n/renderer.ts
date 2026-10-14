@@ -5,6 +5,7 @@ import {
   fallbackLng,
   languages,
   defaultNS,
+  defaultLanguagePreference,
   languagePreferenceKey,
   resolvePreference,
   type LanguagePreference
@@ -48,8 +49,13 @@ window.api.i18nextElectronBackend.onLanguageChange((args) => {
 })
 
 function currentPreference(): LanguagePreference {
-  return (window.electron.store.get(languagePreferenceKey) as LanguagePreference) || 'system'
+  return (window.electron.store.get(languagePreferenceKey) as LanguagePreference) || defaultLanguagePreference
 }
+
+// 启动时把当前语言同步给主进程
+window.electron.ipcRenderer.send('ChangeLanguage-Request', {
+  lng: resolvePreference(window.electron.store.get(languagePreferenceKey), navigator.language)
+})
 
 // 系统语言变化时，仅在“跟随系统”下自动切换
 window.addEventListener('languagechange', () => {

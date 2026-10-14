@@ -2,7 +2,7 @@ import './user-data.js'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { execute, runMigrate } from './db.js'
-import { createMainWindow, createMenubarWindow } from './factories.js'
+import { createMainWindow } from './factories.js'
 import {
   registerDeeplinkProtocol,
   registerDeeplinkHandle,
@@ -57,7 +57,6 @@ app.whenReady().then(async () => {
   initStoreMain(store)
   initApiServerMain(store)
   let mainWindow = createMainWindow() /// 主界面
-  createMenubarWindow() /// 小窗口界面
   initMain(mainWindow)
   initShellMain(mainWindow)
   initTTSMain(mainWindow)

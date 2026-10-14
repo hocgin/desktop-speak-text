@@ -22,7 +22,7 @@ const FEEDBACK_URL = 'https://logspot.hocgin.top/addone-speak-text/?active=feedb
 
 const API_DOCS_URL = 'https://logspot.hocgin.top/addone-speak-text/?active=api'
 
-const LANGUAGE_NAMES: Record<string, string> = { en: 'English', zh: '简体中文' }
+const LANGUAGE_NAMES: Record<string, string> = { en: 'English', zh: '简体中文', 'zh-TW': '繁體中文' }
 
 export default function SettingsPage(): React.JSX.Element {
   const { t } = useTranslation()
@@ -123,6 +123,7 @@ export default function SettingsPage(): React.JSX.Element {
               </SelectItem>
               <SelectItem value="en">{LANGUAGE_NAMES.en}</SelectItem>
               <SelectItem value="zh">{LANGUAGE_NAMES.zh}</SelectItem>
+              <SelectItem value="zh-TW">{LANGUAGE_NAMES['zh-TW']}</SelectItem>
             </SelectContent>
           </Select>
         </div>

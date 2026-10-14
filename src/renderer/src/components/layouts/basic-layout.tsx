@@ -6,17 +6,13 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useMenuData } from '@/renderer/components/router/menu.js'
 import { Toolbar } from '@/renderer/components/toolbar/index.js'
 import { Footer } from '@/renderer/components/footer/index.js'
-import PopOver from '@/renderer/components/popover/index.js'
 import { Tooltip } from '@/renderer/components/ui/tooltip.js'
 import { cn } from '@/renderer/lib/utils.js'
 import { useTranslation } from 'react-i18next'
-import clsx from 'clsx'
-import styles from './index.module.css'
 
-export default function BasicLayout({ id = 'main', isMenubar = false }) {
+export default function BasicLayout({ id = 'main' }) {
   const [collapsed, setCollapsed] = useState(true)
   const menuData = useMenuData(id)
-  const isMacOs = /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { pathname } = useLocation()
@@ -24,11 +20,6 @@ export default function BasicLayout({ id = 'main', isMenubar = false }) {
   return (
     <div className="flex h-full w-full max-h-screen max-w-[100vw] flex-col bg-background">
       <Metrics />
-      {isMenubar && (
-        <div className={clsx(styles.popover, { [styles.topPopover]: isMacOs })}>
-          <PopOver position="top" height={12} />
-        </div>
-      )}
       <main className="flex h-full w-full flex-col overflow-hidden">
         <Toolbar />
         <div className="flex min-h-0 flex-1 gap-2 px-2 pt-2">
@@ -80,11 +71,6 @@ export default function BasicLayout({ id = 'main', isMenubar = false }) {
         </div>
         <Footer />
       </main>
-      {isMenubar && (
-        <div className={clsx(styles.popover, { [styles.bottomPopover]: !isMacOs })}>
-          <PopOver position="bottom" height={12} />
-        </div>
-      )}
     </div>
   )
 }

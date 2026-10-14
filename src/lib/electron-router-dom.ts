@@ -10,6 +10,6 @@ export const { Router, registerRoute, settings } = createElectronRouter({
   // 生产环境（pnpm start）不设置端口，使用 file:// 协议
   port: isDev ? 5173 : undefined,
   types: {
-    ids: ['main', 'menubar']
+    ids: ['main']
   }
 })

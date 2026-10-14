@@ -62,21 +62,6 @@ const routes = {
       path: '/login',
       component: LoginPage
     }
-  ] as LocalRoute[],
-  menubar: [
-    {
-      path: '/',
-      title: 'Home',
-      component: () => <BasicLayout id={'menubar'} isMenubar={true} />,
-      routes: [
-        {
-          title: 'nav.speak',
-          path: '/speak',
-          icon: <AudioLines size={16} />,
-          component: SpeakPage
-        }
-      ]
-    }
   ] as LocalRoute[]
 } as Record<string, LocalRoute[]>
 export default routes
