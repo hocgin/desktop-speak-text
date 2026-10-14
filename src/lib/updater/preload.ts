@@ -23,6 +23,11 @@ export function initUpdaterPreload(obj: any = {}) {
       return ipcRenderer.invoke('updater:install-update')
     },
 
+    // 获取当前应用版本
+    getVersion: (): Promise<ApiResponse<string>> => {
+      return ipcRenderer.invoke('updater:get-version')
+    },
+
     // 获取状态
     getStatus: (): Promise<ApiResponse<UpdaterState>> => {
       return ipcRenderer.invoke('updater:get-status')

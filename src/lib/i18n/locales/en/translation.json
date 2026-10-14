@@ -56,6 +56,9 @@
     "fetchModels": "Fetch models",
     "fetchHelp": "Save first, then fetch the model list. You can enter an ID if listing is unsupported.",
     "installFirst": "Install the engine and a model in AI model manager first.",
+    "engineFirstTitle": "Step 1: Install the speech engine",
+    "engineFirstDesc": "Local models need the speech engine to run. Install the engine first, then download a model.",
+    "engineFirstTip": "Install the speech engine first",
     "localModel": "Local model",
     "selectModel": "Select an installed model",
     "language": "Synthesis language",
@@ -282,6 +285,21 @@
     "subtitle": "Manage your app preferences.",
     "language": "Language",
     "languageHelp": "Choose the display language of the app.",
-    "system": "Follow system"
+    "system": "Follow system",
+    "version": "Current version",
+    "versionHelp": "Check whether a newer version is available.",
+    "checkUpdate": "Check for updates",
+    "checking": "Checking…",
+    "upToDate": "You're on the latest version.",
+    "updateAvailable": "New version {{version}} is available.",
+    "download": "Download update",
+    "downloading": "Downloading… {{percent}}%",
+    "downloaded": "Update {{version}} is ready.",
+    "install": "Restart & install",
+    "installing": "Installing…",
+    "checkFailed": "Update check failed: {{error}}",
+    "feedback": "Feedback",
+    "feedbackHelp": "Report issues or share suggestions.",
+    "feedbackOpen": "Open feedback page"
   }
 }

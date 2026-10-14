@@ -117,7 +117,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   }, [voices, languageFilter, countryFilter, genderFilter, showFavoritesOnly, favorites])
 
   return (
-    <div className="space-y-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="text-xs font-semibold tracking-wider text-muted-foreground">{t('voice.title')}</div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -138,7 +138,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         <span className="text-xs text-muted-foreground">{t('voice.count', { count: filteredVoices.length })}</span>
       </div>
 
-      <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border bg-muted/30 p-1">
+      <div className="max-h-48 min-h-32 space-y-1 overflow-y-auto rounded-lg border bg-muted/30 p-1">
         {filteredVoices.length === 0 && (
           <div className="py-6 text-center text-sm text-muted-foreground">{t('voice.none')}</div>
         )}

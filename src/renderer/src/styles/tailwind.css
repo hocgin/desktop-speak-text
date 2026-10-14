@@ -73,3 +73,13 @@
     border-radius: 4px;
   }
 }
+
+/* 播放器：均衡器跳动与生成中的呼吸光晕 */
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+@keyframes soft-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}

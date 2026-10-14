@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { AudioLines, History } from 'lucide-react'
 import { Card } from '@/renderer/components/ui/card.js'
@@ -24,12 +24,34 @@ import { ParameterPanel } from './components/ParameterPanel.jsx'
 import { AudioPlayer } from './components/AudioPlayer.jsx'
 import { HistoryList } from './components/HistoryList.jsx'
 
+const SETTINGS_KEY = 'speakSettings'
+
+interface SpeakSettings {
+  engine?: 'edge' | 'local'
+  local?: LocalTTSInput
+  referenceName?: string
+  voiceName?: string
+  options?: TTSOptions
+}
+
+// 读取上次保存的配置（读取失败时回退为默认值）
+function loadSettings(): SpeakSettings {
+  try {
+    return window.electron.store.get<SpeakSettings>(SETTINGS_KEY) ?? {}
+  } catch {
+    return {}
+  }
+}
+
 function SpeakPage(): React.JSX.Element {
   const { t } = useTranslation()
+  const [saved] = useState(loadSettings)
   const { state: aiState } = useAIState()
-  const [engine, setEngine] = useState<'edge' | 'local'>('edge')
-  const [local, setLocal] = useState<LocalTTSInput>({ modelId: '', language: 'zh', speed: 1 })
-  const [referenceName, setReferenceName] = useState('')
+  const [engine, setEngine] = useState<'edge' | 'local'>(saved.engine ?? 'edge')
+  const [local, setLocal] = useState<LocalTTSInput>(
+    saved.local ?? { modelId: '', language: 'zh', speed: 1 }
+  )
+  const [referenceName, setReferenceName] = useState(saved.referenceName ?? '')
   const [generationTask, setGenerationTask] = useState<string>()
   const [text, setText] = useState('')
   useEffect(() => {
@@ -54,20 +76,26 @@ function SpeakPage(): React.JSX.Element {
       setReferenceName('')
     }
   }, [aiState, local.modelId])
-  const [voiceName, setVoiceName] = useState<string>('')
-  const [options, setOptions] = useState<TTSOptions>({
-    rate: 1.0,
-    volume: 1.0,
-    pitch: 0.0
-  })
+  const [voiceName, setVoiceName] = useState<string>(saved.voiceName ?? '')
+  const [options, setOptions] = useState<TTSOptions>(
+    saved.options ?? { rate: 1.0, volume: 1.0, pitch: 0.0 }
+  )
+
+  // 配置变更后持久化，下次打开自动恢复
+  useEffect(() => {
+    try {
+      window.electron.store.set(SETTINGS_KEY, { engine, local, referenceName, voiceName, options })
+    } catch (error) {
+      console.error('保存语音配置失败:', error)
+    }
+  }, [engine, local, referenceName, voiceName, options])
   const [language] = useState('zh-CN')
   const [activeTab, setActiveTab] = useState('generate')
-  const [triggerPlay, setTriggerPlay] = useState<{ path: string; timestamp: number } | undefined>(
-    undefined
-  )
   const [previewingVoice, setPreviewingVoice] = useState<string | undefined>(undefined)
   const [currentPlayingRecordId, setCurrentPlayingRecordId] = useState<number | null>(null) // 当前播放的历史记录ID
-  const [triggerStop, setTriggerStop] = useState<number>(0) // 触发停止播放的计数器
+  // 历史记录使用页面级独立的 audio 元素：切到「历史」Tab 时生成页会被卸载，不能依赖 AudioPlayer
+  const historyAudioRef = useRef<HTMLAudioElement | null>(null)
+  const historyPlaySeqRef = useRef(0)
   const [downloadingHistoryId, setDownloadingHistoryId] = useState<number | null>(null) // 正在下载的历史记录ID
 
   const {
@@ -127,22 +155,55 @@ function SpeakPage(): React.JSX.Element {
     }
   }, [text, voiceName, options, generate, engine, local, t])
 
-  // 历史记录操作
-  const handlePlayHistory = useCallback((record: TTSRecord) => {
-    if (record.audioPath) {
-      // 设置 triggerPlay 来触发播放，使用 timestamp 确保每次都能触发
-      setTriggerPlay({ path: record.audioPath, timestamp: Date.now() })
-      // 记录当前播放的记录ID
-      setCurrentPlayingRecordId(record.id)
+  // 初始化历史记录播放用的 audio 元素
+  useEffect(() => {
+    const audio = new Audio()
+    const reset = () => setCurrentPlayingRecordId(null)
+    audio.addEventListener('ended', reset)
+    audio.addEventListener('error', reset)
+    historyAudioRef.current = audio
+    return () => {
+      audio.removeEventListener('ended', reset)
+      audio.removeEventListener('error', reset)
+      audio.pause()
+      historyAudioRef.current = null
     }
   }, [])
 
+  // 历史记录操作
+  const handlePlayHistory = useCallback(
+    async (record: TTSRecord) => {
+      const audio = historyAudioRef.current
+      if (!record.audioPath || !audio) return
+      const seq = ++historyPlaySeqRef.current
+      audio.pause()
+      setCurrentPlayingRecordId(record.id)
+      try {
+        const dataUrl = await window.electron.tts.loadAudio(record.audioPath)
+        // 期间用户点了其他记录或停止，丢弃本次结果
+        if (seq !== historyPlaySeqRef.current) return
+        audio.src = dataUrl
+        audio.currentTime = 0
+        await audio.play()
+      } catch (error) {
+        if (seq !== historyPlaySeqRef.current) return
+        console.error('播放历史记录失败:', error)
+        setCurrentPlayingRecordId(null)
+        toast.error(t('speak.noAudioFile'))
+      }
+    },
+    [t]
+  )
+
   // 停止历史记录播放
   const handleStopHistory = useCallback(() => {
-    // 清除播放状态
+    historyPlaySeqRef.current++
+    const audio = historyAudioRef.current
+    if (audio) {
+      audio.pause()
+      audio.currentTime = 0
+    }
     setCurrentPlayingRecordId(null)
-    // 触发停止播放
-    setTriggerStop((prev) => prev + 1)
   }, [])
 
   const handleDeleteRecord = useCallback(
@@ -240,8 +301,8 @@ function SpeakPage(): React.JSX.Element {
   }, [])
 
   return (
-    <div className="h-full overflow-y-auto px-4 pb-5">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+    <div className="h-full overflow-y-auto px-4 pb-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-full flex-col">
         <div className="sticky top-0 z-10 -mx-4 bg-background px-4 py-3">
           <TabsList>
             <TabsTrigger value="generate">
@@ -255,14 +316,19 @@ function SpeakPage(): React.JSX.Element {
           </TabsList>
         </div>
 
-        <TabsContent value="generate" className="mt-1">
-          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <section className="flex min-w-0 flex-col gap-4">
-              <Card className="gap-3 p-5">
-                <TextEditor value={text} onChange={setText} maxLength={5000} />
-                <div className="flex flex-wrap items-center gap-3">
-                  <TextAssistant text={text} onChange={setText} state={aiState} />
-                  {generationTask && (
+        <TabsContent value="generate" className="mt-1 min-h-0 flex-1">
+          {/* 大屏下两列等高并撑满可视区域：左侧文本区自适应高度，右侧音色列表自适应并内部滚动 */}
+          <div className="grid gap-4 md:h-full md:min-h-[34rem] md:grid-cols-[minmax(0,1fr)_320px] md:grid-rows-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_360px]">
+            <section className="flex min-h-0 min-w-0 flex-col gap-4">
+              <Card className="min-h-0 flex-1 gap-3 p-5">
+                <TextEditor
+                  value={text}
+                  onChange={setText}
+                  maxLength={5000}
+                  actions={<TextAssistant text={text} onChange={setText} state={aiState} />}
+                />
+                {generationTask && (
+                  <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       {t('ai.localGenerating')}
                       <Button
@@ -273,18 +339,15 @@ function SpeakPage(): React.JSX.Element {
                         {t('ai.cancel')}
                       </Button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </Card>
-              <Card className="bg-gradient-to-b from-card to-accent/40 p-5">
+              <Card className="shrink-0 bg-gradient-to-b from-card to-accent/40 p-5">
                 <AudioPlayer
                   isGenerating={isGenerating}
                   isPlaying={isPlaying}
                   hasAudio={hasAudio}
                   currentAudioPath={currentAudio}
-                  triggerPlay={triggerPlay?.path}
-                  triggerPlayTimestamp={triggerPlay?.timestamp}
-                  triggerStop={triggerStop}
                   onGenerate={handleGenerate}
                   onDownload={handleDownload}
                   onStop={handleAudioEnd}
@@ -293,9 +356,9 @@ function SpeakPage(): React.JSX.Element {
               </Card>
             </section>
 
-            <aside className="lg:sticky lg:top-14">
-              <Card className="gap-5 p-5">
-                <div>
+            <aside className="min-h-0">
+              <Card className="gap-5 overflow-y-auto p-5 md:h-full">
+                <div className="shrink-0">
                   <div className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground">
                     {t('speak.engine')}
                   </div>
@@ -334,7 +397,7 @@ function SpeakPage(): React.JSX.Element {
                       onPreview={handlePreviewVoice}
                       previewing={previewingVoice}
                     />
-                    <div>
+                    <div className="shrink-0">
                       <div className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground">
                         {t('speak.params')}
                       </div>
@@ -347,7 +410,7 @@ function SpeakPage(): React.JSX.Element {
           </div>
         </TabsContent>
 
-        <TabsContent value="history" className="mt-1">
+        <TabsContent value="history" className="mt-1 flex-1">
           <Card className="p-2">
             <HistoryList
               records={history}

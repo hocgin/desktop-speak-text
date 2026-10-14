@@ -16,8 +16,8 @@ interface WindowProps extends Electron.BrowserWindowConstructorOptions {
 
 export function createWindow({ id, query, ...options }: WindowProps) {
   const window = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1100,
+    height: 800,
     show: false,
     resizable: false,
     alwaysOnTop: false,

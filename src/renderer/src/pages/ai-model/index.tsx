@@ -224,6 +224,8 @@ export default function AiModelPage(): React.JSX.Element {
     state.localBusy || state.tasks.some((t) => t.status === 'running' && t.kind !== 'text')
   const installTask = state.tasks.filter((t) => t.kind === 'install').at(-1)
   const importTask = state.tasks.filter((t) => t.kind === 'import').at(-1)
+  // 引擎未安装时，引导用户先安装引擎，再下载模型
+  const needEngine = state.supported && !state.runtimeReady
 
   return (
     <div className="h-full overflow-y-auto px-6 pt-5 pb-6">
@@ -251,9 +253,27 @@ export default function AiModelPage(): React.JSX.Element {
         <TabsContent value="local" className="space-y-4">
           {!state.supported && <Alert variant="info">{t('ai.unsupported')}</Alert>}
 
-          <Card className="bg-gradient-to-br from-card to-accent/60 p-5">
+          {needEngine && (
+            <Alert variant="info">
+              <strong>{t('ai.engineFirstTitle')}</strong>
+              <span className="ml-1">{t('ai.engineFirstDesc')}</span>
+            </Alert>
+          )}
+
+          <Card
+            className={
+              needEngine
+                ? 'bg-gradient-to-br from-card to-accent/60 p-5 ring-2 ring-primary/40'
+                : 'bg-gradient-to-br from-card to-accent/60 p-5'
+            }
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
+                {needEngine && (
+                  <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    1
+                  </span>
+                )}
                 <span className="font-medium">{t('ai.engine')}</span>
                 <Badge variant={state.runtimeReady ? 'success' : 'secondary'}>
                   {state.runtimeReady ? t('ai.ready') : t('ai.notInstalled')}
@@ -263,6 +283,7 @@ export default function AiModelPage(): React.JSX.Element {
                 </span>
               </div>
               <Button
+                variant={needEngine ? 'default' : 'outline'}
                 disabled={!state.supported || active}
                 onClick={() => action(() => window.electron.ai.installRuntime(crypto.randomUUID()))}
               >
@@ -352,7 +373,8 @@ export default function AiModelPage(): React.JSX.Element {
                     {!model.installed ? (
                       <Button
                         size="sm"
-                        disabled={!state.supported || active}
+                        disabled={!state.supported || active || needEngine}
+                        title={needEngine ? t('ai.engineFirstTip') : undefined}
                         onClick={() =>
                           action(() => window.electron.ai.downloadModel(model.id, crypto.randomUUID()))
                         }
@@ -399,6 +421,9 @@ export default function AiModelPage(): React.JSX.Element {
                       {model.installed.managed ? t('ai.managed') : t('ai.imported')} ·{' '}
                       {model.installed.path}
                     </p>
+                  )}
+                  {!model.installed && needEngine && (
+                    <p className="mt-3 text-xs text-muted-foreground">{t('ai.engineFirstTip')}</p>
                   )}
                   {taskProgress(task)}
                 </Card>

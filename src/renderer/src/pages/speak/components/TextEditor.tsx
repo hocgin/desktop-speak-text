@@ -11,13 +11,16 @@ interface TextEditorProps {
   onChange: (value: string) => void
   maxLength?: number
   placeholder?: string
+  // 头部右上角的额外操作（如 AI 助手）
+  actions?: React.ReactNode
 }
 
 export const TextEditor: React.FC<TextEditorProps> = ({
   value,
   onChange,
   maxLength = 5000,
-  placeholder
+  placeholder,
+  actions
 }) => {
   const { t } = useTranslation()
   const handleImport = useCallback(async () => {
@@ -37,13 +40,14 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   const wordCount = value.length
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileText className="size-4 text-muted-foreground" />
           {t('editor.title')}
         </div>
         <div className="flex items-center gap-2">
+          {actions}
           <span
             className={cn(
               'text-xs tabular-nums text-muted-foreground',
@@ -65,7 +69,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
         onChange={(e) => e.target.value.length <= maxLength && onChange(e.target.value)}
         placeholder={placeholder ?? t('editor.placeholder')}
         maxLength={maxLength}
-        className="min-h-72 resize-y p-3.5 text-[15px] leading-7"
+        className="min-h-60 flex-1 resize-none p-3.5 text-[15px] leading-7"
       />
     </div>
   )

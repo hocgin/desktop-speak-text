@@ -279,6 +279,11 @@ export function initUpdaterMain(window: BrowserWindow) {
     }
   })
 
+  // 获取当前应用版本
+  ipcMain.handle('updater:get-version', async (): Promise<ApiResponse<string>> => {
+    return { success: true, data: app.getVersion() }
+  })
+
   // 获取状态
   ipcMain.handle('updater:get-status', async (): Promise<ApiResponse<UpdaterState>> => {
     return {

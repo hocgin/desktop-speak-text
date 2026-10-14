@@ -57,6 +57,9 @@ export interface UpdaterAPI {
   // 安装更新（会重启应用）
   installUpdate: () => Promise<ApiResponse<void>>
 
+  // 获取当前应用版本
+  getVersion: () => Promise<ApiResponse<string>>
+
   // 获取当前状态
   getStatus: () => Promise<ApiResponse<UpdaterState>>
 
