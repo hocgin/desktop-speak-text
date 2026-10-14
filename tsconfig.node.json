@@ -1,0 +1,25 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/lib/**/*",
+    "src/lib/**/*.d.ts",
+    "env.d.ts"
+  ],
+  "exclude": [
+    "src/lib/*/renderer.ts",
+    "src/lib/*/renderer.tsx"
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "composite": true,
+    "types": [
+      "electron-vite/node",
+    ],
+    "moduleResolution": "node16",
+    "module": "node16",
+    "noUnusedLocals": false,
+  }
+}

@@ -1,0 +1,27 @@
+.updateButton {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-app-region: no-drag !important;
+}
+
+.updateButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);
+}
+
+.updateButton:active {
+  transform: scale(0.98);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

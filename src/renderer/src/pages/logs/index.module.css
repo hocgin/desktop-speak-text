@@ -1,0 +1,14 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  align-items: unset !important;
+  justify-content: unset !important;
+  background-color: #000 !important;
+  color: #fff !important;
+}
+/*:global(.xterm),*/
+/*:global(.xterm-screen) ,*/
+/*:global(.xterm-scrollable-element) {*/
+/*  height: 100% !important;*/
+/*}*/

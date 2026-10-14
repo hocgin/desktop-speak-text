@@ -1,0 +1,22 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+.idea/
+auto-updates/
+# 密钥 / 环境变量（本地私有，勿提交；模板见 env.example）
+.env
+.env.*
+!env.example
+*.pem
+*.p12
+*.key
+
+# AI skills（本地安装，不上传；版本锁见 skills-lock.json）
+.agent/skills/
+.agents/skills/
+.claude/skills/
+.junie/skills/
+.trae/skills/

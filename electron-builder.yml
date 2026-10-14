@@ -1,0 +1,105 @@
+# https://www.electron.build/configuration.html
+appId: in.hocg.app.desktop-speak-text
+productName: SpeakText
+compression: 'maximum'
+publish:
+  provider: generic
+  url: https://cdn.hocgin.top/desktop-speak-text/auto-updates
+directories:
+  buildResources: build
+files:
+  # 包含所有必要的文件
+  - out/**/*
+  - package.json
+  - resources/licenses/**
+  - drizzle/**/*
+  # 排除不必要的文件和目录
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+
+  # 排除不必要的文件和目录
+  - '!dist/**/*.map'
+  - '!dist-electron/**/*.map'
+
+  - '!**/*.{ts,tsx}'
+  - '!**/*.md'
+  - THIRD_PARTY_NOTICES.md
+
+  - '!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme,HISTORY.md,CONTRIBUTING.md}'
+  - '!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples,coverage,docs,doc}'
+  - '!**/node_modules/*.d.ts'
+  - '!**/node_modules/.bin'
+  - '!**/node_modules/*/*.md'
+  - '!**/node_modules/*/*.markdown'
+  - '!**/node_modules/*/LICENSE*'
+  - '!**/node_modules/*/{.github,.vscode,.idea}'
+  - '!**/node_modules/*/{rollup.config.js,webpack.config.js,tsconfig.json}'
+  - '!**/node_modules/*/.*'
+  - '!**/node_modules/**/*.map'
+  - '!**/node_modules/**/*.{spec,test}.{js,jsx,ts,tsx}'
+  - '!**/node_modules/*/{yarn.lock,package-lock.json,pnpm-lock.yaml}'
+
+  - '!**/node_modules/lucide-react/dist/*.{ts,tsx}'
+  - '!**/node_modules/@types'
+asar: true
+asarUnpack:
+  - node_modules/better-sqlite3/**
+  - node_modules/edge-tts-universal/**
+  - out/main/chunks/*.node
+  - resources/**
+  - drizzle/**
+extraFiles:
+  - src/lib/i18n/locales/**
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - ia32
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  runAfterFinish: true
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: true      # ✅ 生成桌面快捷方式
+  createStartMenuShortcut: false    # ✅ 生成开始菜单快捷方式
+  shortcutName: "SpeakText"       # 快捷方式名称
+mac:
+  icon: build/icon.icns
+  # 生产分发请通过环境变量传入 Developer ID Application 证书名称
+  # identity: '<SHA1-FINGERPRINT>'
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # 使用显式 entitlements，确保签名与 notarization 行为稳定
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: true
+  target:
+    - dmg
+
+linux:
+  icon: build/icon.png
+  target:
+    - AppImage
+#    - snap
+    - deb
+  maintainer: electronjs.org
+  category: Utility
+artifactName: "${name}-${version}-${arch}.${ext}"
+npmRebuild: true
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/
+protocols:
+  name: myapp
+  schemes: [ "myapp" ]

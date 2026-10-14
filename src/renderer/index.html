@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Electron</title>
+  <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+  <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self' data: blob:;
+        script-src 'self' data: blob: 'unsafe-inline' https://www.clarity.ms;
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob: https:;
+        connect-src 'self' https://k.clarity.ms;
+      ">
+</head>
+
+<body>
+<div id="root"></div>
+<script type="module" src="./src/index.tsx"></script>
+</body>
+</html>

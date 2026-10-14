@@ -1,0 +1,113 @@
+name: Build/release Electron app
+
+on:
+  push:
+    tags:
+      - v*.*.*
+
+concurrency:
+  group: release-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set package version from tag
+        shell: bash
+        run: |
+          # shellcheck disable=SC2016
+          node -e 'const fs = require("fs"); const tag = process.env.GITHUB_REF_NAME; const version = tag.replace(/^v/, ""); if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) throw new Error(`Invalid release tag: ${tag}`); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); pkg.version = version; fs.writeFileSync("package.json", `${JSON.stringify(pkg, null, 2)}\n`);'
+
+      - name: Build Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo snap install snapcraft --classic
+          pnpm run build
+          npx electron-builder --linux --publish never
+
+      - name: Build macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          pnpm run build
+          npx electron-builder --mac --publish never
+
+      - name: Build Windows
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          pnpm run build
+          npx electron-builder --win --publish never
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ runner.os }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.snap
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
+            dist/latest*.yml
+            dist/*.blockmap
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          overwrite_files: true
+          fail_on_unmatched_files: false
+          files: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.snap
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
+            dist/latest*.yml
+            dist/*.blockmap
