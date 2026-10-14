@@ -57,7 +57,7 @@ asarUnpack:
 extraFiles:
   - src/lib/i18n/locales/**
 win:
-  icon: build/icon.ico
+  icon: resources/icon.ico
   target:
     - target: nsis
       arch:
@@ -73,7 +73,7 @@ nsis:
   createStartMenuShortcut: false    # ✅ 生成开始菜单快捷方式
   shortcutName: "SpeakText"       # 快捷方式名称
 mac:
-  icon: build/icon.icns
+  icon: resources/icon.icns
   # 生产分发请通过环境变量传入 Developer ID Application 证书名称
   # identity: '<SHA1-FINGERPRINT>'
   hardenedRuntime: true
@@ -91,7 +91,7 @@ mac:
     - dmg
 
 linux:
-  icon: build/icon.png
+  icon: resources/icon.png
   target:
     - AppImage
 #    - snap
